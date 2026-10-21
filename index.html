@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Garden supplies volume calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E7EBE2; --card:#FFFFFF; --ink:#1E2820; --muted:#5D6A5F; --line:#CBD3C6;
+  --accent:#36614A; --accent-ink:#FFFFFF; --sand:#B79E6E; --field:#F5F7F2;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#151B17; --card:#1F2721; --ink:#E6ECE4; --muted:#9AA79C; --line:#33403A;
+    --accent:#7DB592; --accent-ink:#0F1A13; --sand:#C9B285; --field:#18201A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#151B17; --card:#1F2721; --ink:#E6ECE4; --muted:#9AA79C; --line:#33403A;
+  --accent:#7DB592; --accent-ink:#0F1A13; --sand:#C9B285; --field:#18201A;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 "Barlow",system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:560px;margin:0 auto;padding:20px 16px 40px}
+h1{font:700 1.9rem/1.1 "Barlow Condensed","Arial Narrow",sans-serif;margin:4px 0 4px;letter-spacing:.01em}
+.sub{color:var(--muted);margin:0 0 20px}
+
+.result{background:var(--accent);color:var(--accent-ink);border-radius:18px;padding:18px 20px;margin-bottom:18px}
+.big{font:700 3.6rem/1 "Barlow Condensed","Arial Narrow",sans-serif;font-variant-numeric:tabular-nums}
+.big small{font-size:1.6rem;margin-left:4px}
+.result p{margin:6px 0 0;opacity:.92}
+.extras{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:12px;font-weight:600}
+.extras span:empty{display:none}
+
+.area{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px}
+.area-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;color:var(--muted);font-size:.92rem}
+.row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:4px}
+input{width:100%;font:500 1.25rem "Barlow",system-ui,sans-serif;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--field);color:var(--ink)}
+input:focus-visible,button:focus-visible{outline:3px solid var(--sand);outline-offset:2px}
+.area-vol{margin-top:8px;font-size:.92rem;color:var(--muted)}
+.remove{background:none;border:0;color:var(--muted);font:inherit;text-decoration:underline;cursor:pointer;padding:4px}
+
+.add{width:100%;padding:12px;border:2px dashed var(--line);border-radius:14px;background:none;color:var(--ink);font:600 1rem "Barlow",sans-serif;cursor:pointer;margin-bottom:22px}
+
+fieldset{border:0;padding:0;margin:0 0 18px}
+legend{font-weight:600;margin-bottom:8px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1;min-width:56px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font:600 1rem "Barlow",sans-serif;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.settings{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hint{color:var(--muted);font-size:.85rem;margin:6px 0 0}
+.reset{background:none;border:0;color:var(--muted);text-decoration:underline;font:inherit;cursor:pointer;padding:0;margin-top:8px}
+</style>
+</head>
+<body>
+<main>
+  <h1>How much do they need?</h1>
+  <p class="sub">Length × width × depth, added up across every area.</p>
+
+  <section class="result" aria-live="polite">
+    <div class="big"><span id="total">0.00</span><small>m³</small></div>
+    <p id="summary">Enter the customer’s measurements below.</p>
+    <div class="extras"><span id="loads"></span><span id="tonnes"></span></div>
+  </section>
+
+  <div id="areas"></div>
+  <button class="add" id="addArea" type="button">Add another area</button>
+
+  <fieldset>
+    <legend>Depth is in</legend>
+    <div class="seg" id="unitSeg">
+      <button type="button" data-unit="cm" aria-pressed="true">cm</button>
+      <button type="button" data-unit="mm" aria-pressed="false">mm</button>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Extra for settling and spillage</legend>
+    <div class="seg" id="extraSeg">
+      <button type="button" data-extra="0" aria-pressed="true">0%</button>
+      <button type="button" data-extra="5" aria-pressed="false">5%</button>
+      <button type="button" data-extra="10" aria-pressed="false">10%</button>
+      <button type="button" data-extra="15" aria-pressed="false">15%</button>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Shop settings</legend>
+    <div class="settings">
+      <div><label for="trailer">Trailer load (m³)</label><input id="trailer" type="number" inputmode="decimal" min="0" step="0.1" placeholder="e.g. 0.5"></div>
+      <div><label for="density">Tonnes per m³</label><input id="density" type="number" inputmode="decimal" min="0" step="0.1" placeholder="optional"></div>
+    </div>
+    <p class="hint">Use the shop’s own figures. These are remembered on this device.</p>
+  </fieldset>
+
+  <button class="reset" id="clear" type="button">Clear measurements</button>
+</main>
+
+<script>
+(function(){
+  var state = { unit:"cm", extra:0, areas:[{l:"",w:"",d:""}] };
+  var areasEl = document.getElementById("areas");
+  var trailerEl = document.getElementById("trailer");
+  var densityEl = document.getElementById("density");
+
+  function load(k){ try{ return localStorage.getItem(k) || ""; }catch(e){ return ""; } }
+  function save(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+  trailerEl.value = load("trailer");
+  densityEl.value = load("density");
+
+  function num(v){ var n = parseFloat(String(v).replace(",", ".")); return isFinite(n) && n > 0 ? n : 0; }
+  function fmt(n,dp){ return n.toLocaleString("en-AU",{minimumFractionDigits:dp,maximumFractionDigits:dp}); }
+  function areaVol(a){ var d = num(a.d) / (state.unit === "cm" ? 100 : 1000); return num(a.l) * num(a.w) * d; }
+
+  function render(){
+    areasEl.innerHTML = "";
+    state.areas.forEach(function(a,i){
+      var div = document.createElement("div");
+      div.className = "area";
+      var n = state.areas.length > 1 ? "Area " + (i+1) : "Area";
+      div.innerHTML =
+        '<div class="area-head"><span>'+n+'</span>' +
+        (state.areas.length > 1 ? '<button class="remove" type="button" data-i="'+i+'">Remove</button>' : '') + '</div>' +
+        '<div class="row">' +
+        '<div><label for="l'+i+'">Length (m)</label><input id="l'+i+'" data-i="'+i+'" data-k="l" type="number" inputmode="decimal" min="0" step="0.1" value="'+a.l+'"></div>' +
+        '<div><label for="w'+i+'">Width (m)</label><input id="w'+i+'" data-i="'+i+'" data-k="w" type="number" inputmode="decimal" min="0" step="0.1" value="'+a.w+'"></div>' +
+        '<div><label for="d'+i+'">Depth ('+state.unit+')</label><input id="d'+i+'" data-i="'+i+'" data-k="d" type="number" inputmode="decimal" min="0" step="1" value="'+a.d+'"></div>' +
+        '</div><div class="area-vol" id="v'+i+'"></div>';
+      areasEl.appendChild(div);
+    });
+    update();
+  }
+
+  function update(){
+    var base = 0, sq = 0;
+    state.areas.forEach(function(a,i){
+      var v = areaVol(a); base += v; sq += num(a.l) * num(a.w);
+      var el = document.getElementById("v"+i);
+      if(el) el.textContent = v > 0 ? fmt(num(a.l)*num(a.w),2) + " m² → " + fmt(v,2) + " m³" : "";
+    });
+    var total = base * (1 + state.extra/100);
+    document.getElementById("total").textContent = fmt(total,2);
+    document.getElementById("summary").textContent = total > 0
+      ? "Covers " + fmt(sq,2) + " m²" + (state.extra ? ", including " + state.extra + "% extra" : "") + "."
+      : "Enter the customer’s measurements below.";
+    var t = num(trailerEl.value), dn = num(densityEl.value);
+    document.getElementById("loads").textContent = (t && total) ? fmt(total/t,1) + " trailer loads (" + Math.ceil(total/t - 1e-9) + " trips)" : "";
+    document.getElementById("tonnes").textContent = (dn && total) ? "≈ " + fmt(total*dn,2) + " tonnes" : "";
+  }
+
+  areasEl.addEventListener("input", function(e){
+    var i = e.target.dataset.i, k = e.target.dataset.k;
+    if(i !== undefined && k){ state.areas[i][k] = e.target.value; update(); }
+  });
+  areasEl.addEventListener("click", function(e){
+    if(e.target.classList.contains("remove")){ state.areas.splice(+e.target.dataset.i,1); render(); }
+  });
+  document.getElementById("addArea").addEventListener("click", function(){
+    state.areas.push({l:"",w:"",d:""}); render();
+    var inp = document.getElementById("l"+(state.areas.length-1)); if(inp) inp.focus();
+  });
+  function seg(id, attr, key, cast){
+    var box = document.getElementById(id);
+    box.addEventListener("click", function(e){
+      var b = e.target.closest("button"); if(!b) return;
+      box.querySelectorAll("button").forEach(function(x){ x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+      state[key] = cast(b.dataset[attr]);
+      key === "unit" ? render() : update();
+    });
+  }
+  seg("unitSeg","unit","unit",String);
+  seg("extraSeg","extra","extra",Number);
+  trailerEl.addEventListener("input", function(){ save("trailer", trailerEl.value); update(); });
+  densityEl.addEventListener("input", function(){ save("density", densityEl.value); update(); });
+  document.getElementById("clear").addEventListener("click", function(){ state.areas = [{l:"",w:"",d:""}]; render(); });
+
+  render();
+})();
+</script>
+</body>
+</html>
